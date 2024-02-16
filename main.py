@@ -4,7 +4,10 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html
 from config.config import Config
 from api.gpt_api import GPTAPI
-from utils.github_utils import read_github_file
+from utils.github_utils import read_github_file, clone_repo, push_changes
+import json
+import os
+from git import Repo
 
 app = FastAPI()
 config = Config()
@@ -34,7 +37,29 @@ async def generate_summary(repo_url: str, file_path: str):
             max_tokens = config.get_gpt_config().get("default_max_tokens", 50)
             completion = gpt_api.request_completion(prompt, max_tokens)
             if completion:
-                return {"summary": completion["choices"][0]["text"].strip()}
+                summary = completion["choices"][0]["text"].strip()
+
+                # Save the summary to a file
+                output_file = "summary_output.json"
+                with open(output_file, 'w') as f:
+                    json.dump({"summary": summary}, f)
+
+                # Clone the repository
+                clone_dir = 'temp_repo'
+                clone_repo(repo_url, clone_dir)
+
+                # Commit changes and push to the repository
+                repo = Repo(clone_dir)
+                pat = os.getenv("GITHUB_PAT")  # Get your PAT from environment variable
+                if pat:
+                    push_changes(repo, output_file, pat)
+                else:
+                    print("No GitHub PAT provided. Unable to push changes.")
+
+                # Create a pull request
+                # Your code to create a pull request goes here
+
+                return {"summary": summary}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
