@@ -1,0 +1,4 @@
+gpt_config:
+  api_url: "https://your_gpt_api_endpoint.com/completion"
+  default_prompt: "Please summarize the contents of the file:\n"
+  default_max_tokens: 50
